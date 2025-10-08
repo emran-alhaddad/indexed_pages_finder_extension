@@ -63,6 +63,29 @@
     .input-wrapper {
       position: relative;
     }
+    .error-message {
+      margin-top: 4px;
+      font-size: 11px;
+      color: #ff6b6b;
+      min-height: 13px;
+    }
+    .field.invalid input {
+      border: 1px solid rgba(255, 107, 107, 0.8);
+      background: rgba(255, 107, 107, 0.15);
+    }
+    #attemptLabel,
+    #attemptError {
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 18px;
+      display: none;
+    }
+    #attemptLabel {
+      color: rgba(255, 255, 255, 0.85);
+    }
+    #attemptError {
+      color: #ff6b6b;
+    }
     input {
       /* Inputs are slightly narrower than the wrapper to leave room for overlays */
       width: 87%;
@@ -147,6 +170,7 @@
         <input type="password" id="apiKey" placeholder="Enter API key" />
         <svg class="toggle-visibility" id="toggleApi" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
       </div>
+      <div class="error-message" id="apiKeyError"></div>
     </div>
     <div class="field">
       <label>CSE ID <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" title="Where to create your search engine">Get ID</a></label>
@@ -154,14 +178,18 @@
         <input type="password" id="cseId" placeholder="Enter CSE ID" />
         <svg class="toggle-visibility" id="toggleCse" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
       </div>
+      <div class="error-message" id="cseIdError"></div>
     </div>
     <div class="field">
       <label>Domain(s)</label>
       <div class="input-wrapper">
         <input type="text" id="domains" placeholder="example.com, example.org" />
       </div>
+      <div class="error-message" id="domainsError"></div>
     </div>
     <button id="startBtn">Start Fetch</button>
+    <div id="attemptLabel"></div>
+    <div id="attemptError"></div>
     <div id="progressContainer">
       <progress id="progress" value="0" max="0"></progress>
       <div id="status"></div>

@@ -30,6 +30,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const progressContainer = document.getElementById('progressContainer');
   const progressEl = document.getElementById('progress');
   const statusEl = document.getElementById('status');
+  const attemptLabel = document.getElementById('attemptLabel');
+  const attemptErrorEl = document.getElementById('attemptError');
+  const fieldErrors = {
+    apiKey: document.getElementById('apiKeyError'),
+    cseId: document.getElementById('cseIdError'),
+    domains: document.getElementById('domainsError')
+  };
+  const formFields = {
+    apiKey: {
+      input: apiKeyInput,
+      errorEl: fieldErrors.apiKey,
+      validate: (value) => (value ? '' : 'API key is required.')
+    },
+    cseId: {
+      input: cseIdInput,
+      errorEl: fieldErrors.cseId,
+      validate: (value) => (value ? '' : 'CSE ID is required.')
+    },
+    domains: {
+      input: domainsInput,
+      errorEl: fieldErrors.domains,
+      validate: (value) => {
+        if (!value) return 'Domain list is required.';
+        const domains = value.split(/\s*,\s*/).filter(Boolean);
+        if (domains.length === 0) return 'Enter at least one domain.';
+        return '';
+      }
+    }
+  };
 
   // Configure visibility toggles
   setupToggle('toggleApi', 'apiKey');
@@ -49,14 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
   apiKeyInput.addEventListener('input', () => {
     const val = apiKeyInput.value.trim();
     chrome.storage.local.set({ apiKey: val });
+    validateField('apiKey');
+    if (!currentState || !currentState.running) statusEl.textContent = '';
   });
   cseIdInput.addEventListener('input', () => {
     const val = cseIdInput.value.trim();
     chrome.storage.local.set({ cseId: val });
+    validateField('cseId');
+    if (!currentState || !currentState.running) statusEl.textContent = '';
   });
   domainsInput.addEventListener('input', () => {
     const val = domainsInput.value.trim();
     chrome.storage.local.set({ domains: val });
+    validateField('domains');
+    if (!currentState || !currentState.running) statusEl.textContent = '';
   });
 
   // Update UI whenever fetch state changes in storage
@@ -69,62 +104,117 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Start a new harvest when the user clicks the start button
   startBtn.addEventListener('click', () => {
+    const allValid = validateAll();
+    if (!allValid) {
+      statusEl.textContent = 'Please fix the highlighted fields.';
+      return;
+    }
     const apiKey = apiKeyInput.value.trim();
     const cseId = cseIdInput.value.trim();
     const domainsStr = domainsInput.value.trim();
-    if (!apiKey || !cseId || !domainsStr) {
-      statusEl.textContent = 'Please fill in all fields.';
-      return;
-    }
     const domains = domainsStr.split(/\s*,\s*/).filter(Boolean);
     if (domains.length === 0) {
-      statusEl.textContent = 'Please enter at least one domain.';
+      const field = domainsInput.closest('.field');
+      if (field) field.classList.add('invalid');
+      fieldErrors.domains.textContent = 'Enter at least one domain.';
+      domainsInput.setAttribute('aria-invalid', 'true');
+      statusEl.textContent = 'Please fix the highlighted fields.';
       return;
     }
+    statusEl.textContent = '';
+    attemptErrorEl.style.display = 'none';
+    attemptErrorEl.textContent = '';
+    attemptLabel.textContent = 'Starting attempt 1 ...';
+    attemptLabel.style.display = 'block';
+    startBtn.disabled = true;
     // Save the credentials and domains for future sessions
     chrome.storage.local.set({ apiKey, cseId, domains: domainsStr });
-    // Initiate the harvest via the background script
-    chrome.runtime.sendMessage({ action: 'startFetch', apiKey, cseId, domains }, (response) => {
-      // If there is a runtime error (e.g. the background script failed to
-      // respond), reflect that in the UI rather than leaving it stuck on
-      // "Starting…".  Otherwise, set an optimistic starting state; real
-      // progress will come from onChanged.
+    chrome.runtime.sendMessage({ action: 'startFetch', apiKey, cseId, domains }, () => {
       if (chrome.runtime.lastError) {
-        currentState = {
-          running: false,
-          domains,
-          pagesResults: [],
-          assetsResults: [],
-          totalSteps: 0,
-          completedSteps: 0,
-          status: `Failed to start: ${chrome.runtime.lastError.message}`,
-          startedAt: Date.now()
-        };
-        chrome.storage.local.set({ fetchState: currentState });
-        updateUI();
-        return;
+        const failureMessage = `Failed to start: ${chrome.runtime.lastError.message}`;
+        attemptLabel.style.display = 'none';
+        attemptErrorEl.textContent = failureMessage;
+        attemptErrorEl.style.display = 'block';
+        statusEl.textContent = failureMessage;
+        startBtn.disabled = false;
       }
-      currentState = {
-        running: true,
-        domains,
-        pagesResults: [],
-        assetsResults: [],
-        totalSteps: 0,
-        completedSteps: 0,
-        status: 'Starting…',
-        startedAt: Date.now()
-      };
-      chrome.storage.local.set({ fetchState: currentState });
-      updateUI();
     });
   });
 
   // Download the harvested URLs when the user clicks download
   downloadBtn.addEventListener('click', () => {
     if (!currentState || currentState.running) return;
-    const pages = (currentState.pagesResults || []).map((u) => ({ url: u }));
-    const assets = (currentState.assetsResults || []).map((u) => ({ url: u }));
-    const output = { pages, assets };
+    const rawPages = Array.isArray(currentState.pagesResults) ? currentState.pagesResults : [];
+    const rawAssets = Array.isArray(currentState.assetsResults) ? currentState.assetsResults : [];
+    const normaliseDomain = (domain) => {
+      if (!domain) return '';
+      let input = domain.trim();
+      if (!input) return '';
+      if (!/^https?:\/\//i.test(input)) {
+        input = `https://${input}`;
+      }
+      try {
+        const parsed = new URL(input);
+        return parsed.hostname.toLowerCase().replace(/^www\./, '');
+      } catch (e) {
+        return input.replace(/^www\./, '').split('/')[0].toLowerCase();
+      }
+    };
+    const seenDomains = new Set();
+    const domainConfigs = (Array.isArray(currentState.domains) ? currentState.domains : [])
+      .map((d) => normaliseDomain(d))
+      .filter((domain) => {
+        if (!domain || seenDomains.has(domain)) return false;
+        seenDomains.add(domain);
+        return true;
+      })
+      .sort((a, b) => b.length - a.length);
+    const domainGroups = {};
+    const domainOrder = [];
+    const ensureGroup = (key) => {
+      const label = key || 'unknown';
+      if (!domainGroups[label]) {
+        domainGroups[label] = { pages: [], assets: [] };
+        domainOrder.push(label);
+      }
+      return domainGroups[label];
+    };
+    const matchDomain = (url) => {
+      try {
+        const hostname = new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+        for (const domain of domainConfigs) {
+          if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+            return domain;
+          }
+        }
+        return hostname || url;
+      } catch (e) {
+        return url;
+      }
+    };
+    rawPages.forEach((url) => {
+      const entry = { url };
+      const domainKey = matchDomain(url);
+      ensureGroup(domainKey).pages.push(entry);
+    });
+    rawAssets.forEach((url) => {
+      const entry = { url };
+      const domainKey = matchDomain(url);
+      ensureGroup(domainKey).assets.push(entry);
+    });
+    // Ensure configured domains appear even if empty
+    domainConfigs.forEach((domainKey) => ensureGroup(domainKey));
+    const output = {};
+    domainOrder.forEach((domainKey) => {
+      const group = domainGroups[domainKey];
+      if (!group.pages.length && !group.assets.length && domainOrder.length === 1) {
+        return;
+      }
+      output[domainKey] = {
+        pages: group.pages,
+        assets: group.assets
+      };
+    });
     const blob = new Blob([JSON.stringify(output, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     // Build filename: index_<domains>_<timestamp>.json
@@ -150,15 +240,28 @@ document.addEventListener('DOMContentLoaded', () => {
    * buttons, and updates the status text.
    */
   function updateUI() {
+    const attemptLabelText = currentState?.attemptLabel || '';
+    const attemptErrorText = currentState?.attemptError || '';
+    if (attemptLabel) {
+      attemptLabel.textContent = attemptLabelText;
+      attemptLabel.style.display = attemptLabelText ? 'block' : 'none';
+    }
+    if (attemptErrorEl) {
+      attemptErrorEl.textContent = attemptErrorText;
+      attemptErrorEl.style.display = attemptErrorText ? 'block' : 'none';
+    }
+    const running = Boolean(currentState?.running);
+    const retryScheduled = Boolean(currentState?.retryScheduled);
     // Initialise UI element values from the current state
     if (!currentState) {
       progressContainer.style.display = 'none';
       startBtn.disabled = false;
       downloadBtn.disabled = true;
-      statusEl.textContent = '';
+      if (!attemptLabelText && !attemptErrorText) {
+        statusEl.textContent = '';
+      }
       return;
     }
-    const running = currentState.running;
     const total = currentState.totalSteps || 0;
     const completed = currentState.completedSteps || 0;
     // If running and there are steps, show the progress bar
@@ -177,5 +280,31 @@ document.addEventListener('DOMContentLoaded', () => {
       statusEl.textContent = currentState.status || `Fetched ${totalUrls} URLs.`;
       downloadBtn.disabled = totalUrls === 0;
     }
+    if (running || retryScheduled || attemptLabelText) {
+      startBtn.disabled = true;
+    }
+  }
+
+  function validateField(key) {
+    const fieldConfig = formFields[key];
+    if (!fieldConfig) return true;
+    const { input, errorEl, validate } = fieldConfig;
+    const value = input.value.trim();
+    const message = validate(value);
+    const fieldWrapper = input.closest('.field');
+    if (message) {
+      if (fieldWrapper) fieldWrapper.classList.add('invalid');
+      if (errorEl) errorEl.textContent = message;
+      input.setAttribute('aria-invalid', 'true');
+      return false;
+    }
+    if (fieldWrapper) fieldWrapper.classList.remove('invalid');
+    if (errorEl) errorEl.textContent = '';
+    input.removeAttribute('aria-invalid');
+    return true;
+  }
+
+  function validateAll() {
+    return Object.keys(formFields).every((key) => validateField(key));
   }
 });
