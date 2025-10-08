@@ -6,6 +6,14 @@ A Chrome extension that uses Google Programmable Search (Custom Search API) to c
 - Work continues in the background; closing the popup does not stop progress.
 - Exported JSON groups results by each domain at the top level.
 
+## Chrome Web Store
+
+For non‑developers, install from the Chrome Web Store:
+
+- Chrome Web Store listing: https://chromewebstore.google.com/detail/Indexed-Pages-Finder/<your-extension-id>
+
+(Replace `<your-extension-id>` once the listing is published. I can update this automatically when you share the ID.)
+
 ## Features
 
 - Enter and persist API Key, CSE ID, and domain list
@@ -38,6 +46,17 @@ Notes:
 - Click `Start Fetch`
 - Observe progress and attempt messages (retries on 429)
 - When complete, click `Download JSON`
+
+## Demo
+
+- Quick video walkthrough (placeholder): https://youtu.be/your-demo-link
+- Steps demo:
+  - Open the popup, enter API Key, CSE ID, and domains
+  - Click Start; watch attempts and progress update
+  - Close and reopen the popup to see background progress persist
+  - Download JSON and inspect grouped domains
+
+(If you provide a GIF or video link, I’ll embed it here.)
 
 ## Export Format
 
