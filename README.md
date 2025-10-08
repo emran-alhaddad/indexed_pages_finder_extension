@@ -49,7 +49,7 @@ Notes:
 
 ## Demo
 
-- Quick video walkthrough (placeholder): https://youtu.be/your-demo-link
+- Quick video walkthrough: https://youtu.be/fYiSpIDRGDg
 - Steps demo:
   - Open the popup, enter API Key, CSE ID, and domains
   - Click Start; watch attempts and progress update
