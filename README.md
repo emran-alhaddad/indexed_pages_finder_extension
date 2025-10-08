@@ -106,5 +106,4 @@ See SECURITY.md to report vulnerabilities responsibly.
 
 ## License
 
-This repository is intended to be open-source. Choose a license before publishing (e.g., MIT, Apache-2.0). If you’d like, we can add a LICENSE file—tell us your preference.
-
+Licensed under the MIT License. See `LICENSE` for details.
