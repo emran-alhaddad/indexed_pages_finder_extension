@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Indexed Pages Finder</title>
+  <style>
+    :root {
+      /* Primary brand colours */
+      --primary: #00a8ff;
+      --secondary: #011627;
+      --background: #010e1b;
+      --glass-bg: rgba(255, 255, 255, 0.06);
+      --glass-border: rgba(255, 255, 255, 0.12);
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, var(--secondary), var(--background));
+      color: #ffffff;
+      width: 360px;
+    }
+    .card {
+      position: relative;
+      padding: 20px;
+      border-radius: 16px;
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .header img {
+      width: 32px;
+      height: 32px;
+      margin-right: 8px;
+    }
+    .header h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .field {
+      margin-bottom: 16px;
+    }
+    .field label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+    .field label a {
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 11px;
+    }
+    .input-wrapper {
+      position: relative;
+    }
+    input {
+      /* Inputs are slightly narrower than the wrapper to leave room for overlays */
+      width: 87%;
+      padding: 10px 34px 10px 12px;
+      border: none;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 14px;
+      outline: none;
+      backdrop-filter: blur(4px);
+    }
+    input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .toggle-visibility {
+      position: absolute;
+      top: 50%;
+      right: 8px;
+      transform: translateY(-50%);
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      fill: rgba(255, 255, 255, 0.6);
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      border: none;
+      border-radius: 8px;
+      background: linear-gradient(135deg, var(--primary), #007acc);
+      color: #fff;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    #progressContainer {
+      margin-top: 12px;
+      display: none;
+    }
+    progress {
+      width: 100%;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      border: none;
+      border-radius: 5px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    progress::-webkit-progress-bar {
+      background: rgba(255, 255, 255, 0.1);
+    }
+    progress::-webkit-progress-value {
+      background: var(--primary);
+    }
+    #status {
+      font-size: 12px;
+      margin-top: 6px;
+      min-height: 18px;
+    }
+    /* Additional spacing between primary and secondary buttons */
+    #downloadBtn {
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <img src="icons/icon32.png" alt="Icon" />
+      <h2>Indexed&nbsp;Pages&nbsp;Finder</h2>
+    </div>
+    <div class="field">
+      <label>API Key <a href="https://developers.google.com/custom-search/v1/overview" target="_blank" title="Where to obtain your API key">Get key</a></label>
+      <div class="input-wrapper">
+        <input type="password" id="apiKey" placeholder="Enter API key" />
+        <svg class="toggle-visibility" id="toggleApi" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
+      </div>
+    </div>
+    <div class="field">
+      <label>CSE ID <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" title="Where to create your search engine">Get ID</a></label>
+      <div class="input-wrapper">
+        <input type="password" id="cseId" placeholder="Enter CSE ID" />
+        <svg class="toggle-visibility" id="toggleCse" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
+      </div>
+    </div>
+    <div class="field">
+      <label>Domain(s)</label>
+      <div class="input-wrapper">
+        <input type="text" id="domains" placeholder="example.com, example.org" />
+      </div>
+    </div>
+    <button id="startBtn">Start Fetch</button>
+    <div id="progressContainer">
+      <progress id="progress" value="0" max="0"></progress>
+      <div id="status"></div>
+    </div>
+    <button id="downloadBtn" disabled>Download JSON</button>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
