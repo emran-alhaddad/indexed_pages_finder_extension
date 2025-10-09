@@ -10,7 +10,7 @@ A Chrome extension that uses Google Programmable Search (Custom Search API) to c
 
 For non‑developers, install from the Chrome Web Store:
 
-- Chrome Web Store listing: https://chromewebstore.google.com/detail/Indexed-Pages-Finder/<your-extension-id>
+- Chrome Web Store listing: https://chromewebstore.google.com/detail/indexed_pages_finder_extension/<your-extension-id>
 
 (Replace `<your-extension-id>` once the listing is published. I can update this automatically when you share the ID.)
 
@@ -37,6 +37,7 @@ For non‑developers, install from the Chrome Web Store:
 - Domains: Comma-separated list (e.g., `example.com, sub.example.org`)
 
 Notes:
+
 - If your API key restricts HTTP referrers, Chrome extension requests may have an empty referrer. If you see an error like “Requests from referer <empty> are blocked”, adjust the key’s API restrictions to allow requests without an HTTP referrer.
 
 ## Usage
