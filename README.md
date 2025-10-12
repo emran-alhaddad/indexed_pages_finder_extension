@@ -10,9 +10,8 @@ A Chrome extension that uses Google Programmable Search (Custom Search API) to c
 
 For non‑developers, install from the Chrome Web Store:
 
-- Chrome Web Store listing: https://chromewebstore.google.com/detail/indexed_pages_finder_extension/<your-extension-id>
+- Chrome Web Store listing: https://chromewebstore.google.com/detail/indexed-pages-finder/kocknephdohmkkncdocjfchbdelhmoin
 
-(Replace `<your-extension-id>` once the listing is published. I can update this automatically when you share the ID.)
 
 ## Features
 
