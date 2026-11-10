@@ -10,9 +10,14 @@ const INSPECT = 'https://searchconsole.googleapis.com/v1/urlInspection/index:ins
 const MAX_SITEMAP_URLS = 50000;
 
 class Stopped extends Error {}
-let ctl = null; // { stopped, done } for the scan in progress
+let ctl = null; // { stopped, done, ac } for the scan in progress; ac aborts its requests on Stop
 
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Resolves after ms, or right away when signal aborts (so Stop never waits out a retry delay).
+const sleep = (ms, signal) => new Promise((r) => {
+  if (signal?.aborted) return r();
+  const t = setTimeout(r, ms);
+  signal?.addEventListener('abort', () => { clearTimeout(t); r(); }, { once: true });
+});
 
 async function getToken() {
   const { token } = await chrome.identity.getAuthToken({ interactive: false });
@@ -24,11 +29,18 @@ async function api(url, body) {
   let token = await getToken();
   for (let attempt = 0; ; attempt++) {
     if (ctl.stopped) throw new Stopped();
-    const res = await fetch(url, {
-      method: body ? 'POST' : 'GET',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined
-    });
+    let res;
+    try {
+      res = await fetch(url, {
+        method: body ? 'POST' : 'GET',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: body ? JSON.stringify(body) : undefined,
+        signal: ctl.ac.signal
+      });
+    } catch (e) {
+      if (ctl.stopped) throw new Stopped();
+      throw e;
+    }
     if (res.ok) return res.json();
     const err = await res.json().catch(() => ({}));
     const message = err.error?.message || `HTTP ${res.status}`;
@@ -38,15 +50,15 @@ async function api(url, body) {
       continue;
     }
     if (attempt < 4 && (res.status === 429 || res.status >= 500)) {
-      await sleep(2000 * 2 ** attempt); // 2s, 4s, 8s, 16s
+      await sleep(2000 * 2 ** attempt, ctl.ac.signal); // 2s, 4s, 8s, 16s
       continue;
     }
     throw Object.assign(new Error(message), { status: res.status });
   }
 }
 
-async function fetchText(url) {
-  const res = await fetch(url);
+async function fetchText(url, signal) {
+  const res = await fetch(url, { signal });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const buf = new Uint8Array(await res.arrayBuffer());
   // .xml.gz files that the server did not already decompress start with the gzip magic bytes
@@ -58,7 +70,7 @@ async function fetchText(url) {
 }
 
 // Reads sitemaps breadth-first (following sitemap indexes) and returns page URLs.
-async function readSitemapUrls(start) {
+async function readSitemapUrls(start, signal) {
   const queue = [...start];
   const seen = new Set();
   const urls = new Set();
@@ -67,9 +79,9 @@ async function readSitemapUrls(start) {
     const path = queue.shift();
     if (seen.has(path)) continue;
     seen.add(path);
-    if (ctl?.stopped) throw new Stopped();
+    if (signal?.aborted) throw new Stopped();
     try {
-      const xml = await fetchText(path);
+      const xml = await fetchText(path, signal);
       const locs = IPF.parseLocs(xml);
       if (!locs.length) continue;
       read++;
@@ -89,12 +101,12 @@ async function readSitemaps(siteUrl) {
   });
   const start = (listed.sitemap || []).map((s) => s.path);
   if (!start.length) start.push(`${IPF.siteOrigin(siteUrl)}/sitemap.xml`);
-  return readSitemapUrls(start);
+  return readSitemapUrls(start, ctl.ac.signal);
 }
 
 // Sitemaps listed in robots.txt, plus the common default locations.
-async function discoverSitemaps(origin) {
-  const robots = await fetchText(`${origin}/robots.txt`).catch(() => '');
+async function discoverSitemaps(origin, signal) {
+  const robots = await fetchText(`${origin}/robots.txt`, signal).catch(() => '');
   return [...new Set([...IPF.parseRobotsSitemaps(robots), `${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`])];
 }
 
@@ -109,16 +121,17 @@ async function readWayback(host) {
     }) + '&filter=statuscode:200&filter=mimetype:text/html';
     for (let attempt = 0; attempt < 3; attempt++) {
       if (ctl.stopped) throw new Stopped();
-      const res = await fetch(url, { signal: AbortSignal.timeout(120000) }).catch(() => null);
+      const res = await fetch(url, { signal: AbortSignal.any([ctl.ac.signal, AbortSignal.timeout(120000)]) }).catch(() => null);
       const rows = res?.ok ? await res.json().catch(() => null) : null;
       if (rows) {
         urls.push(...rows.slice(1).map((r) => r[0]));
         ok++;
         break;
       }
-      await sleep(4000 * (attempt + 1)); // archive.org often answers 503 under load
+      await sleep(4000 * (attempt + 1), ctl.ac.signal); // archive.org often answers 503 under load
     }
   }
+  if (ctl.stopped) throw new Stopped();
   if (!ok) throw new Error('The Wayback Machine did not respond. Try again in a few minutes.');
   return urls;
 }
@@ -141,7 +154,8 @@ async function scanAny({ host }) {
   };
   save(true);
   try {
-    const sm = await readSitemapUrls(await discoverSitemaps(`https://${host}`));
+    const signal = ctl.ac.signal;
+    const sm = await readSitemapUrls(await discoverSitemaps(`https://${host}`, signal), signal);
     sm.urls.forEach((u) => add(u, 'sitemap', 'Listed in the current sitemap'));
     if (!sm.read) st.note = 'No sitemap found; using the Wayback Machine only.';
     st.phase = 'archive';
@@ -152,8 +166,9 @@ async function scanAny({ host }) {
     st.phase = 'done';
     st.message = `Done. ${rows.size} unique pages.`;
   } catch (e) {
-    st.phase = e instanceof Stopped ? 'stopped' : 'error';
-    st.message = e instanceof Stopped ? 'Stopped. Results so far are kept.' : e.message;
+    const stopped = e instanceof Stopped || ctl.stopped;
+    st.phase = stopped ? 'stopped' : 'error';
+    st.message = stopped ? 'Stopped. Results so far are kept.' : e.message;
   }
   st.running = false;
   await save(true);
@@ -180,6 +195,7 @@ async function scan({ siteUrl, inspectLimit }) {
         startDate: IPF.isoDate(start), endDate: IPF.isoDate(end),
         dimensions: ['page'], rowLimit: 25000, startRow, dataState: 'all'
       });
+      if (ctl.stopped) throw new Stopped();
       for (const r of data.rows || []) {
         rows.set(r.keys[0], {
           url: r.keys[0], status: 'indexed', coverage: 'Has search impressions',
@@ -237,8 +253,9 @@ async function scan({ siteUrl, inspectLimit }) {
     st.phase = 'done';
     st.message = 'Done.';
   } catch (e) {
-    st.phase = e instanceof Stopped ? 'stopped' : 'error';
-    st.message = e instanceof Stopped ? 'Stopped. Results so far are kept.' : e.message;
+    const stopped = e instanceof Stopped || ctl.stopped;
+    st.phase = stopped ? 'stopped' : 'error';
+    st.message = stopped ? 'Stopped. Results so far are kept.' : e.message;
   }
   st.running = false;
   await save(true);
@@ -257,7 +274,7 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ error: 'A scan is already running.' });
       return;
     }
-    const mine = (ctl = { stopped: false, done: false });
+    const mine = (ctl = { stopped: false, done: false, ac: new AbortController() });
     (msg.host ? scanAny(msg) : scan(msg)).finally(() => { mine.done = true; });
     sendResponse({ started: true });
   } else if (msg.action === 'newSitePaths') {
@@ -268,7 +285,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       .catch((e) => sendResponse({ error: e.message }));
     return true; // async response
   } else if (msg.action === 'stop') {
-    if (ctl) ctl.stopped = true;
+    if (ctl && !ctl.done) {
+      ctl.stopped = true;
+      ctl.ac.abort(); // cancels the request in flight and any retry wait
+    }
     sendResponse({ ok: true });
   }
 });

@@ -314,6 +314,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stopIfRunning = () => {
     if (!scanState?.running) return false;
     chrome.runtime.sendMessage({ action: 'stop' });
+    // Feedback now; the background confirms with "Stopped" a moment later.
+    for (const id of ['scanBtn', 'scanAnyBtn']) {
+      if ($(id).textContent === 'Stop') { $(id).textContent = 'Stopping…'; $(id).disabled = true; }
+    }
     return true;
   };
 
