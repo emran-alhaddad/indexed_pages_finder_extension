@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Indexed Pages Finder</title>
+  <meta name="description" content="Free Chrome extension that shows which of your pages Google has indexed, which are missing, and why, using your Google Search Console data." />
+  <link rel="icon" href="icon128.png" />
+  <link rel="stylesheet" href="site.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <img src="icon128.png" alt="" width="56" height="56" />
+      <h1>Indexed Pages Finder</h1>
+    </header>
+    <p class="lead">A free Chrome extension that shows which pages of your website Google has indexed, which ones are missing, and why.</p>
+    <p><a class="button" href="https://chromewebstore.google.com/detail/indexed-pages-finder/kocknephdohmkkncdocjfchbdelhmoin">Add to Chrome</a></p>
+
+    <img class="shot" src="screenshots/2-not-indexed.png" alt="The extension popup listing pages that are not indexed, each with Google's reason" />
+
+    <h2>What it does</h2>
+    <ul>
+      <li><strong>Indexed pages:</strong> every page that appeared in Google Search in the last 16 months, with clicks, impressions, CTR and average position.</li>
+      <li><strong>Missing pages:</strong> reads your sitemaps to find pages that never showed up in search.</li>
+      <li><strong>The reason:</strong> asks Google's URL Inspection for the exact index status, such as "Crawled - currently not indexed" or "Excluded by noindex tag".</li>
+      <li><strong>Export:</strong> filter and search the results, then export to CSV or JSON, or copy the URLs.</li>
+    </ul>
+
+    <h2>How it uses your Google account</h2>
+    <p>You sign in with Google and the extension asks for <strong>read-only</strong> access to Google Search Console. It uses that access only to show you indexing data for sites you have verified in Search Console. It can't change anything in your account or on your website. Your data stays in your browser: there are no servers, no analytics and no ads.</p>
+
+    <footer>
+      <a href="privacy.html">Privacy policy</a> ·
+      <a href="https://github.com/emran-alhaddad/indexed_pages_finder_extension">Source code</a> ·
+      <a href="https://github.com/emran-alhaddad/indexed_pages_finder_extension/issues">Support</a>
+    </footer>
+  </main>
+</body>
+</html>

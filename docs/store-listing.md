@@ -67,16 +67,14 @@ Shows which pages of the user's own websites are indexed by Google, using the us
 **Privacy policy URL:**
 
 ```
-https://github.com/emran-alhaddad/indexed_pages_finder_extension/blob/master/PRIVACY.md
+https://emran-alhaddad.github.io/indexed_pages_finder_extension/privacy.html
 ```
 
-This URL only works after the branch is merged to master. The live policy must match v3 before you submit.
+This page is served by GitHub Pages from `docs/` on master.
 
-## Google OAuth verification (Cloud Console, separate from the store)
+## Google OAuth app (Cloud Console project `indexed-pages-finder`)
 
-Required before the public can sign in without an "unverified app" warning.
-
-- App homepage: the Chrome Web Store listing URL.
-- Privacy policy: the same PRIVACY.md URL as above.
-- Scope justification: "Read-only access to show the user which of their own verified sites' pages are indexed. Data stays in the browser."
-- Demo video: a short unlisted YouTube recording of sign-in → scan → results, with the consent screen visible.
+- `webmasters.readonly` is a **non-sensitive** scope, so no scope verification or demo video is needed.
+- Branding: home page `https://emran-alhaddad.github.io/indexed_pages_finder_extension/`, privacy `.../privacy.html`, authorized domain `emran-alhaddad.github.io`.
+- Don't upload a logo on the Branding page; a logo triggers brand verification.
+- Publishing status must be **In production**, or only test users can sign in.
