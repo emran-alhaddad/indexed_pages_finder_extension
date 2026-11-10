@@ -29,6 +29,12 @@ Then open `chrome://extensions`, enable Developer mode, and click **Load unpacke
 
 `webmasters.readonly` is a sensitive scope. Until Google verifies the consent screen, users see an "unverified app" warning and you're limited to 100 test users. Submit the app for verification before you publish v3.
 
+## Release
+
+1. Bump `version` in `manifest.json`.
+2. Run `./package.sh`. It runs the tests, refuses to build while the client ID is still a placeholder, and writes `dist/indexed-pages-finder-<version>.zip`.
+3. Upload the zip in the Developer Dashboard. The listing text, permission justifications and privacy answers are in `docs/store-listing.md`, and the screenshots are in `docs/screenshots/`.
+
 ## Files
 
 - `background.js`: the scan pipeline (Search Analytics, then sitemaps, then URL Inspection), with retries on 401, 429 and 5xx errors.
