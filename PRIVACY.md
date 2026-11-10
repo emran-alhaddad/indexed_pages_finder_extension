@@ -24,6 +24,7 @@ All of it is kept in Chrome's local storage on your device and deleted when you 
 
 - Requests go only to Google's Search Console APIs (`www.googleapis.com`, `searchconsole.googleapis.com`).
 - To read sitemaps, the extension fetches sitemap files from **your own site**, only after you allow access to that site.
+- In **Any site** mode, the extension reads the public sitemaps of the domain you enter and asks the Wayback Machine (`web.archive.org`) for archived URLs of that domain. No sign-in is used and nothing about you is sent.
 - No data is sent to the developer or to any third party.
 
 ## Use of Google user data
@@ -38,7 +39,7 @@ None.
 
 - **identity:** sign in with Google.
 - **storage:** remember your settings and last results locally.
-- **Optional site access:** read sitemaps of the site you scan; asked per site.
+- **Optional site access:** read sitemaps of the site you scan, and `web.archive.org` for Any site mode; asked per site.
 
 ## Contact
 

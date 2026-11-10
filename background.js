@@ -57,39 +57,114 @@ async function fetchText(url) {
   return new TextDecoder().decode(buf);
 }
 
+// Reads sitemaps breadth-first (following sitemap indexes) and returns page URLs.
+async function readSitemapUrls(start) {
+  const queue = [...start];
+  const seen = new Set();
+  const urls = new Set();
+  let read = 0;
+  while (queue.length && seen.size < 500 && urls.size < MAX_SITEMAP_URLS) {
+    const path = queue.shift();
+    if (seen.has(path)) continue;
+    seen.add(path);
+    if (ctl?.stopped) throw new Stopped();
+    try {
+      const xml = await fetchText(path);
+      const locs = IPF.parseLocs(xml);
+      if (!locs.length) continue;
+      read++;
+      if (IPF.isSitemapIndex(xml)) queue.push(...locs);
+      else locs.forEach((u) => urls.add(u));
+    } catch (e) {
+      // unreadable sitemap: skip it
+    }
+  }
+  return { urls: [...urls], read };
+}
+
 async function readSitemaps(siteUrl) {
   const listed = await api(`${SC}/sites/${encodeURIComponent(siteUrl)}/sitemaps`).catch((e) => {
     if (e instanceof Stopped) throw e;
     return {};
   });
-  const queue = (listed.sitemap || []).map((s) => s.path);
-  if (!queue.length) queue.push(`${IPF.siteOrigin(siteUrl)}/sitemap.xml`);
-  const seen = new Set();
-  const urls = new Set();
-  let failed = 0;
-  while (queue.length && seen.size < 500 && urls.size < MAX_SITEMAP_URLS) {
-    const path = queue.shift();
-    if (seen.has(path)) continue;
-    seen.add(path);
-    if (ctl.stopped) throw new Stopped();
-    try {
-      const xml = await fetchText(path);
-      const locs = IPF.parseLocs(xml);
-      if (IPF.isSitemapIndex(xml)) queue.push(...locs);
-      else locs.forEach((u) => urls.add(u));
-    } catch (e) {
-      failed++;
+  const start = (listed.sitemap || []).map((s) => s.path);
+  if (!start.length) start.push(`${IPF.siteOrigin(siteUrl)}/sitemap.xml`);
+  return readSitemapUrls(start);
+}
+
+// Sitemaps listed in robots.txt, plus the common default locations.
+async function discoverSitemaps(origin) {
+  const robots = await fetchText(`${origin}/robots.txt`).catch(() => '');
+  return [...new Set([...IPF.parseRobotsSitemaps(robots), `${origin}/sitemap.xml`, `${origin}/sitemap_index.xml`])];
+}
+
+// Every HTML page the Wayback Machine captured with a 200, for host and www.host.
+// ponytail: two prefix queries; a whole-domain query times out (504) on archive.org. Big sites can still time out.
+async function readWayback(host) {
+  const urls = [];
+  let ok = 0;
+  for (const h of [host, `www.${host}`]) {
+    const url = 'https://web.archive.org/cdx/search/cdx?' + new URLSearchParams({
+      url: `${h}/*`, fl: 'original', collapse: 'urlkey', output: 'json', limit: '50000'
+    }) + '&filter=statuscode:200&filter=mimetype:text/html';
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (ctl.stopped) throw new Stopped();
+      const res = await fetch(url, { signal: AbortSignal.timeout(120000) }).catch(() => null);
+      const rows = res?.ok ? await res.json().catch(() => null) : null;
+      if (rows) {
+        urls.push(...rows.slice(1).map((r) => r[0]));
+        ok++;
+        break;
+      }
+      await sleep(4000 * (attempt + 1)); // archive.org often answers 503 under load
     }
   }
-  return { urls: [...urls], failed, read: seen.size - failed };
+  if (!ok) throw new Error('The Wayback Machine did not respond. Try again in a few minutes.');
+  return urls;
+}
+
+async function scanAny({ host }) {
+  const rows = new Map(); // keyed by path so http/https/www/query variants collapse
+  const st = { running: true, mode: 'any', siteUrl: host, phase: 'sitemaps', message: `Reading ${host} sitemaps…`, note: '', startedAt: Date.now() };
+  const save = (withRows) => {
+    const data = { scanState: { ...st } };
+    if (withRows) data.scanResults = { siteUrl: host, mode: 'any', finishedAt: Date.now(), rows: [...rows.values()] };
+    return chrome.storage.local.set(data);
+  };
+  const add = (url, status, coverage) => {
+    if (!IPF.isPageUrl(url)) return;
+    const path = IPF.pathOf(url);
+    if (rows.has(path)) return;
+    const clean = new URL(url);
+    clean.port = clean.search = clean.hash = ''; // archive URLs often carry :80 and tracking queries
+    rows.set(path, { url: clean.href, status, coverage });
+  };
+  save(true);
+  try {
+    const sm = await readSitemapUrls(await discoverSitemaps(`https://${host}`));
+    sm.urls.forEach((u) => add(u, 'sitemap', 'Listed in the current sitemap'));
+    if (!sm.read) st.note = 'No sitemap found; using the Wayback Machine only.';
+    st.phase = 'archive';
+    st.message = `Found ${rows.size} sitemap pages. Asking the Wayback Machine (can take a minute)…`;
+    save(true);
+    const archived = await readWayback(host);
+    archived.forEach((u) => add(u, 'archive', 'Archived page, not in the sitemap'));
+    st.phase = 'done';
+    st.message = `Done. ${rows.size} unique pages.`;
+  } catch (e) {
+    st.phase = e instanceof Stopped ? 'stopped' : 'error';
+    st.message = e instanceof Stopped ? 'Stopped. Results so far are kept.' : e.message;
+  }
+  st.running = false;
+  await save(true);
 }
 
 async function scan({ siteUrl, inspectLimit }) {
   const rows = new Map();
-  const st = { running: true, siteUrl, phase: 'pages', message: 'Reading pages from Search Console…', note: '', done: 0, total: 0, startedAt: Date.now() };
+  const st = { running: true, mode: 'gsc', siteUrl, phase: 'pages', message: 'Reading pages from Search Console…', note: '', done: 0, total: 0, startedAt: Date.now() };
   const save = (withRows) => {
     const data = { scanState: { ...st, counts: IPF.countByStatus(rows.values()) } };
-    if (withRows) data.scanResults = { siteUrl, finishedAt: Date.now(), rows: [...rows.values()] };
+    if (withRows) data.scanResults = { siteUrl, mode: 'gsc', finishedAt: Date.now(), rows: [...rows.values()] };
     return chrome.storage.local.set(data);
   };
   save(true);
@@ -183,8 +258,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       return;
     }
     const mine = (ctl = { stopped: false, done: false });
-    scan(msg).finally(() => { mine.done = true; });
+    (msg.host ? scanAny(msg) : scan(msg)).finally(() => { mine.done = true; });
     sendResponse({ started: true });
+  } else if (msg.action === 'newSitePaths') {
+    // Paths on the new site, used to guess redirect targets.
+    discoverSitemaps(`https://${msg.host}`)
+      .then(readSitemapUrls)
+      .then((sm) => sendResponse({ paths: sm.urls.filter(IPF.isPageUrl).map(IPF.pathOf) }))
+      .catch((e) => sendResponse({ error: e.message }));
+    return true; // async response
   } else if (msg.action === 'stop') {
     if (ctl) ctl.stopped = true;
     sendResponse({ ok: true });

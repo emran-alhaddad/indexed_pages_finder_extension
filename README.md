@@ -11,7 +11,9 @@ Install: [Chrome Web Store listing](https://chromewebstore.google.com/detail/ind
 1. **Indexed pages:** every page that showed up in Google Search in the last 16 months, with clicks, impressions, CTR and average position.
 2. **Sitemap pages:** reads your sitemaps (from Search Console, or `/sitemap.xml`) to find pages that never appeared in search.
 3. **Real index status:** runs Google's URL Inspection on those pages and reports the exact reason, for example "Crawled - currently not indexed" or "Excluded by noindex tag". Limited to 2,000 checks per site per day by Google.
-4. Filter by Indexed, Not indexed or Unchecked, search the list, and export to CSV or JSON, or copy the URLs.
+4. **Any site mode (no account):** lists every URL of any domain from its sitemaps (`robots.txt`, `/sitemap.xml`) plus the Wayback Machine. Archive-only URLs are the old pages that need redirects in a migration.
+5. **Redirect rules:** matches each old path to the new site's sitemap (exact path first, then a unique slug) and exports a CSV map or nginx, Apache, Next.js or Laravel rules. Anything unmatched is listed as TODO.
+6. Filter by status, search the list, and export to CSV or JSON, or copy the URLs.
 
 Scans run in the background, so closing the popup doesn't stop them. A Stop button keeps partial results.
 
@@ -45,7 +47,7 @@ Then open `chrome://extensions`, enable Developer mode, and click **Load unpacke
 
 - `identity`: Google sign-in (read-only Search Console access).
 - `storage`: remembers the last site and the last scan results.
-- Optional site access: requested per site, only to read that site's sitemaps.
+- Optional site access: requested per site, only to read that site's sitemaps (and `web.archive.org` for Any site mode).
 
 ## License
 
