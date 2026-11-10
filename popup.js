@@ -324,7 +324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     chrome.storage.local.set({ lastSite: siteUrl, inspectLimit });
     // Site access lets the scan read sitemaps; declining still runs the Search Console part.
     chrome.permissions.request({ origins: [IPF.originPattern(siteUrl)] })
-      .catch(() => false)
+      .catch((e) => console.warn('Site access request failed:', e.message))
       .finally(() => start({ action: 'scan', siteUrl, inspectLimit }));
   });
 
@@ -335,9 +335,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!host || !host.includes('.')) return setStatus('Enter a domain like oldclient.com.', true);
     $('host').value = host;
     chrome.storage.local.set({ lastHost: host });
-    chrome.permissions.request({ origins: [`*://*.${host}/*`, 'https://web.archive.org/*'] })
-      .catch(() => false)
-      .then((ok) => ok ? start({ action: 'scan', host }) : setStatus(`Allow access to ${host} and web.archive.org to scan.`, true));
+    // Must be the first async call in the click handler, or Chrome drops the user gesture and refuses.
+    chrome.permissions.request({ origins: [`*://*.${host}/*`, 'https://web.archive.org/*'] }).then(
+      (ok) => ok
+        ? start({ action: 'scan', host })
+        : setStatus(`Chrome's access prompt was declined or closed. The scan has to read ${host}'s sitemap and the Wayback Machine. Click Scan again and choose Allow.`, true),
+      (e) => setStatus(`Chrome refused the access request: ${e.message} (try ⟳ reload in chrome://extensions)`, true)
+    );
   };
   $('scanAnyBtn').addEventListener('click', scanAny);
   $('host').addEventListener('keydown', (e) => { if (e.key === 'Enter') scanAny(); });
