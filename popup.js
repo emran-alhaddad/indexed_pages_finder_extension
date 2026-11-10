@@ -14,8 +14,10 @@ const STATUS = {
 const ORDER = { gsc: ['indexed', 'not_indexed', 'unchecked'], any: ['sitemap', 'archive'] };
 
 let scanState = null;
-let scanResults = null;
+const results = { gsc: null, any: null }; // last scan of each mode, kept apart
+let mode = 'gsc';
 let filter = 'all';
+const cur = () => results[mode];
 
 // ---------- theme ----------
 function applyTheme(t) {
@@ -28,13 +30,16 @@ function currentTheme() {
 }
 
 // ---------- mode ----------
-function setMode(mode) {
+function setMode(m) {
+  mode = m;
+  filter = 'all';
   const any = mode === 'any';
   $('tabGsc').setAttribute('aria-selected', String(!any));
   $('tabAny').setAttribute('aria-selected', String(any));
   $('paneGsc').hidden = any;
   $('paneAny').hidden = !any;
   chrome.storage.local.set({ mode });
+  render();
 }
 
 // ---------- Search Console sign-in ----------
@@ -100,7 +105,7 @@ function setStatus(text, isError = false, note = '') {
 
 function visibleRows() {
   const q = $('search').value.trim().toLowerCase();
-  return (scanResults?.rows || []).filter(
+  return (cur()?.rows || []).filter(
     (r) => (filter === 'all' || r.status === filter) && (!q || r.url.toLowerCase().includes(q))
   );
 }
@@ -143,7 +148,7 @@ function renderSummary(rows, mode) {
   const counts = IPF.countByStatus(rows);
   const keys = ORDER[mode] || Object.keys(counts);
   $('total').textContent = rows.length.toLocaleString();
-  $('sumText').textContent = `pages · ${IPF.siteLabel(scanResults.siteUrl)}`;
+  $('sumText').textContent = `pages · ${IPF.siteLabel(cur().siteUrl)}`;
 
   $('meter').classList.toggle('filtered', filter !== 'all');
   $('meter').replaceChildren(...keys.filter((k) => counts[k]).map((k) => {
@@ -184,13 +189,16 @@ function render() {
   $('track').classList.toggle('busy', running && !determinate);
   $('bar').style.transform = determinate ? `scaleX(${scanState.done / scanState.total})` : '';
   // The summary already says "done"; the readout only speaks while running, on errors, or with a note.
-  if (scanState) setStatus(scanState.phase === 'done' && !scanState.note ? '' : scanState.message, scanState.phase === 'error', scanState.note);
+  // Only show the readout for the scan of the mode on screen.
+  const st = scanState && (scanState.mode || 'gsc') === mode ? scanState : null;
+  if (st) setStatus(st.phase === 'done' && !st.note ? '' : st.message, st.phase === 'error', st.note);
+  else if (!running) setStatus('');
 
-  const rows = scanResults?.rows || [];
+  const rows = cur()?.rows || [];
   $('results').hidden = rows.length === 0;
   if (!rows.length) return;
   if (filter !== 'all' && !rows.some((r) => r.status === filter)) filter = 'all';
-  renderSummary(rows, scanResults.mode || 'gsc');
+  renderSummary(rows, mode);
   const vis = visibleRows();
   $('list').replaceChildren(...vis.slice(0, MAX_RENDER).map(rowItem));
   $('more').textContent = vis.length > MAX_RENDER
@@ -200,7 +208,7 @@ function render() {
 
 // ---------- exports ----------
 function download(text, type, ext, prefix = 'pages') {
-  const site = (scanResults?.siteUrl || 'site').replace(/^sc-domain:/, '').replace(/[^a-z0-9]+/gi, '_');
+  const site = (cur()?.siteUrl || 'site').replace(/^sc-domain:/, '').replace(/[^a-z0-9]+/gi, '_');
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob([text], { type }));
   a.download = `${prefix}_${site}_${new Date().toISOString().slice(0, 10)}.${ext}`;
@@ -250,8 +258,10 @@ async function exportRedirects() {
 
 // ---------- wiring ----------
 document.addEventListener('DOMContentLoaded', async () => {
-  const stored = await chrome.storage.local.get(['scanState', 'scanResults', 'mode', 'theme', 'lastHost', 'newSite', 'format']);
-  ({ scanState = null, scanResults = null } = stored);
+  const stored = await chrome.storage.local.get(['scanState', 'results_gsc', 'results_any', 'scanResults', 'mode', 'theme', 'lastHost', 'newSite', 'format']);
+  scanState = stored.scanState || null;
+  results.gsc = stored.results_gsc || stored.scanResults || null; // scanResults: key used before per-mode results
+  results.any = stored.results_any || null;
   applyTheme(stored.theme);
   setMode(stored.mode || 'gsc');
   if (stored.lastHost) $('host').value = stored.lastHost;
@@ -262,8 +272,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area !== 'local') return;
     if (changes.scanState) scanState = changes.scanState.newValue || null;
-    if (changes.scanResults) scanResults = changes.scanResults.newValue || null;
-    if (changes.scanState || changes.scanResults) render();
+    if (changes.results_gsc) results.gsc = changes.results_gsc.newValue || null;
+    if (changes.results_any) results.any = changes.results_any.newValue || null;
+    if (changes.scanState || changes.results_gsc || changes.results_any) render();
   });
   render();
 
@@ -336,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   $('csvBtn').addEventListener('click', () => download(IPF.toCSV(visibleRows()), 'text/csv', 'csv'));
   $('jsonBtn').addEventListener('click', () =>
-    download(JSON.stringify({ site: scanResults.siteUrl, source: scanResults.mode, exportedAt: new Date().toISOString(), rows: visibleRows() }, null, 2), 'application/json', 'json')
+    download(JSON.stringify({ site: cur().siteUrl, source: mode, exportedAt: new Date().toISOString(), rows: visibleRows() }, null, 2), 'application/json', 'json')
   );
   $('copyBtn').addEventListener('click', async () => {
     const rows = visibleRows();

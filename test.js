@@ -59,4 +59,7 @@ assert.ok(next.includes("{ source: '/a\\\\:b', destination: '/c', permanent: tru
 assert.ok(IPF.redirectRules(pairs, 'laravel').startsWith('<?php'));
 assert.ok(IPF.redirectRules(pairs, 'apache').includes('Redirect 301 "/blog/seo-tips" "/articles/seo-tips"'));
 
+assert.strictEqual(IPF.siteLabel('https://acq-c.com/'), 'acq-c.com');
+assert.strictEqual(IPF.siteLabel('sc-domain:x.com'), 'x.com (domain)');
+
 console.log('ok');

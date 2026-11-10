@@ -128,7 +128,7 @@ async function scanAny({ host }) {
   const st = { running: true, mode: 'any', siteUrl: host, phase: 'sitemaps', message: `Reading ${host} sitemaps…`, note: '', startedAt: Date.now() };
   const save = (withRows) => {
     const data = { scanState: { ...st } };
-    if (withRows) data.scanResults = { siteUrl: host, mode: 'any', finishedAt: Date.now(), rows: [...rows.values()] };
+    if (withRows) data.results_any = { siteUrl: host, mode: 'any', finishedAt: Date.now(), rows: [...rows.values()] };
     return chrome.storage.local.set(data);
   };
   const add = (url, status, coverage) => {
@@ -164,7 +164,7 @@ async function scan({ siteUrl, inspectLimit }) {
   const st = { running: true, mode: 'gsc', siteUrl, phase: 'pages', message: 'Reading pages from Search Console…', note: '', done: 0, total: 0, startedAt: Date.now() };
   const save = (withRows) => {
     const data = { scanState: { ...st, counts: IPF.countByStatus(rows.values()) } };
-    if (withRows) data.scanResults = { siteUrl, mode: 'gsc', finishedAt: Date.now(), rows: [...rows.values()] };
+    if (withRows) data.results_gsc = { siteUrl, mode: 'gsc', finishedAt: Date.now(), rows: [...rows.values()] };
     return chrome.storage.local.set(data);
   };
   save(true);

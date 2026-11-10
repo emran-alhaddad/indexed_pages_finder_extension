@@ -12,8 +12,10 @@ const IPF = {
       : `${new URL(siteUrl).origin}/*`;
   },
 
+  // "sc-domain:x.com" -> "x.com (domain)", "https://www.x.com/" -> "www.x.com", "old.com" -> "old.com"
   siteLabel(siteUrl) {
-    return siteUrl.startsWith('sc-domain:') ? `${siteUrl.slice(10)} (domain)` : siteUrl;
+    if (siteUrl.startsWith('sc-domain:')) return `${siteUrl.slice(10)} (domain)`;
+    return siteUrl.replace(/^https?:\/\//, '').replace(/\/$/, '');
   },
 
   decodeXml(s) {

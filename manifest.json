@@ -13,8 +13,7 @@
     "https://searchconsole.googleapis.com/*"
   ],
   "optional_host_permissions": [
-    "https://*/*",
-    "http://*/*"
+    "*://*/*"
   ],
   "oauth2": {
     "client_id": "892359564852-7bad5fdu1p6d7j8h4022m1eifj3grklq.apps.googleusercontent.com",
