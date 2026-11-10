@@ -1,80 +1,45 @@
 # Privacy Policy
 
-**Last updated:** 2025-10-08
-
----
+**Last updated:** 2026-11-10
 
 ## Overview
 
-**Indexed Pages Finder** stores only the information necessary to perform its single purpose:
-Listing publicly indexed URLs for user-specified domains via **Google’s Programmable Search (Custom Search API).**
+**Indexed Pages Finder** shows which pages of your websites Google has indexed, using your own Google Search Console data. It has no servers of its own; everything runs in your browser.
 
----
+## Google account access
 
-## Data We Store
+- You sign in with Google through Chrome's built-in sign-in (`chrome.identity`).
+- The extension requests **read-only** Search Console access (`webmasters.readonly`). It can't change anything in your Search Console account or on your website.
+- Your sign-in token is managed by Chrome and used only to call Google's Search Console APIs.
+- **Sign out** in the popup removes the token and revokes access.
 
-- **API Key** and **CSE ID** you provide to access Google’s API
-- The **list of domains** you enter
-- **Fetch state/progress** (e.g., steps completed, status text)
-- The **resulting URLs** (pages and assets) returned by Google’s API
+## Data we store (on your device only)
 
-**Storage location:** Chrome storage on your device.
-No server-side storage.
+- The last site you selected and your inspection limit setting.
+- The results of your last scan (URLs, index status, clicks, impressions, position).
 
----
+All of it is kept in Chrome's local storage on your device and deleted when you sign out or uninstall.
 
-## Data Transmission
+## Data transmission
 
-- Your API Key and CSE ID are sent **only** to Google’s Custom Search API to fulfill your requests.
-- The extension **does not transmit** your data to any third-party services other than the Google API endpoints you chose to use.
+- Requests go only to Google's Search Console APIs (`www.googleapis.com`, `searchconsole.googleapis.com`).
+- To read sitemaps, the extension fetches sitemap files from **your own site**, only after you allow access to that site.
+- No data is sent to the developer or to any third party.
 
----
+## Use of Google user data
 
-## Data Sale and Sharing
+Use of information received from Google APIs follows the [Google API Services User Data Policy](https://developers.google.com/terms/api-services-user-data-policy), including its Limited Use requirements. Data is used only to show you your own indexing reports. It is not sold, not used for advertising, and not shared.
 
-We **do not sell, rent, or share** user data with third parties.
+## Analytics and tracking
 
----
-
-## Analytics and Tracking
-
-The extension includes **no analytics, advertising, or tracking** of any kind.
-
----
-
-## Web Content and Browsing
-
-- The extension requests **public search results (URLs)** from Google’s API based on domains you provide.
-- It does **not** access or collect:
-
-  - Your personal website content
-  - Your browsing history
-  - Your user activity
-
----
+None.
 
 ## Permissions
 
-- **storage:** Persist your API Key, CSE ID, domains, and fetch state locally so progress persists if the popup is closed.
-- **downloads:** Export the collected results as a JSON file you save to your device.
-
----
-
-## Security
-
-- Secrets (**API Key/CSE ID**) are stored locally via Chrome storage on your device.
-- Avoid sharing exported files if they contain sensitive URLs you don’t intend to disclose.
-
----
-
-## Changes to This Policy
-
-Updates to this policy will be reflected in the repository:
-👉 [https://github.com/emran-alhaddad/indexed_pages_finder_extension](https://github.com/emran-alhaddad/indexed_pages_finder_extension)
-
----
+- **identity:** sign in with Google.
+- **storage:** remember your settings and last results locally.
+- **Optional site access:** read sitemaps of the site you scan; asked per site.
 
 ## Contact
 
-Privacy questions or requests? Open an issue here:
-👉 [https://github.com/emran-alhaddad/indexed_pages_finder_extension/issues](https://github.com/emran-alhaddad/indexed_pages_finder_extension/issues)
+Open an issue: [github.com/emran-alhaddad/indexed_pages_finder_extension/issues](https://github.com/emran-alhaddad/indexed_pages_finder_extension/issues)

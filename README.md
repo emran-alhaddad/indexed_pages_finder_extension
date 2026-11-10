@@ -1,128 +1,46 @@
 # Indexed Pages Finder (Chrome Extension)
 
-A Chrome extension that uses Google Programmable Search (Custom Search API) to collect publicly indexed URLs for one or more domains. It categorizes results into pages and assets, shows live progress, handles transient rate limits with retries, and exports results as JSON grouped by domain.
+See which of your pages Google has indexed, which are missing, and why, using your own Google Search Console data. No API keys: sign in with Google and pick a site.
 
-- Status labels show start attempts and error messages (e.g., HTTP 429) with up to three retries.
-- Work continues in the background; closing the popup does not stop progress.
-- Exported JSON groups results by each domain at the top level.
+Install: [Chrome Web Store listing](https://chromewebstore.google.com/detail/indexed-pages-finder/kocknephdohmkkncdocjfchbdelhmoin)
 
-## Chrome Web Store
+> v3 replaces the Google Custom Search API, which Google shuts down on January 1, 2027, with the Search Console API.
 
-For non‑developers, install from the Chrome Web Store:
+## What it does
 
-- Chrome Web Store listing: https://chromewebstore.google.com/detail/indexed-pages-finder/kocknephdohmkkncdocjfchbdelhmoin
+1. **Indexed pages:** every page that showed up in Google Search in the last 16 months, with clicks, impressions, CTR and average position.
+2. **Sitemap pages:** reads your sitemaps (from Search Console, or `/sitemap.xml`) to find pages that never appeared in search.
+3. **Real index status:** runs Google's URL Inspection on those pages and reports the exact reason, for example "Crawled - currently not indexed" or "Excluded by noindex tag". Limited to 2,000 checks per site per day by Google.
+4. Filter by Indexed, Not indexed or Unchecked, search the list, and export to CSV or JSON, or copy the URLs.
 
+Scans run in the background, so closing the popup doesn't stop them. A Stop button keeps partial results.
 
-## Features
+## Setup (developer, one time)
 
-- Enter and persist API Key, CSE ID, and domain list
-- Inline validation and visibility toggles for secrets
-- Progress display and background persistence
-- Resilient fetching with adaptive backoff and retries
-- Friendly errors for common failures (rate limits, daily quota, HTTP referer restrictions)
-- JSON export grouped by domain
+The extension needs an OAuth client ID so users can sign in with Google.
 
-## Installation (Developer)
+1. In [Google Cloud Console](https://console.cloud.google.com/), create a project and enable the **Google Search Console API**.
+2. Configure the **OAuth consent screen** and add the scope `https://www.googleapis.com/auth/webmasters.readonly`.
+3. Go to **Credentials**, then **Create OAuth client ID**, and choose **Chrome Extension**. Use the item ID `kocknephdohmkkncdocjfchbdelhmoin`.
+4. Put the client ID into `manifest.json` under `oauth2.client_id`.
+5. For local testing, make the unpacked extension use the store ID: copy the public key from the Chrome Web Store Developer Dashboard (**Package**, then **View public key**) into `manifest.json` as `"key": "..."`.
 
-1. Clone this repository
-2. Open Chrome and navigate to `chrome://extensions`
-3. Enable `Developer mode`
-4. Click `Load unpacked` and select the repository root
+Then open `chrome://extensions`, enable Developer mode, and click **Load unpacked** on this folder.
 
-## Configuration
+`webmasters.readonly` is a sensitive scope. Until Google verifies the consent screen, users see an "unverified app" warning and you're limited to 100 test users. Submit the app for verification before you publish v3.
 
-- API Key: Google Cloud API key with access to Custom Search API
-- CSE ID: Google Programmable Search Engine ID (cx)
-- Domains: Comma-separated list (e.g., `example.com, sub.example.org`)
+## Files
 
-Notes:
-
-- If your API key restricts HTTP referrers, Chrome extension requests may have an empty referrer. If you see an error like “Requests from referer <empty> are blocked”, adjust the key’s API restrictions to allow requests without an HTTP referrer.
-
-## Usage
-
-- Click the extension icon to open the popup
-- Enter API Key, CSE ID, and one or more domains
-- Click `Start Fetch`
-- Observe progress and attempt messages (retries on 429)
-- When complete, click `Download JSON`
-
-## Demo
-
-- Quick video walkthrough: https://youtu.be/fYiSpIDRGDg
-- Steps demo:
-  - Open the popup, enter API Key, CSE ID, and domains
-  - Click Start; watch attempts and progress update
-  - Close and reopen the popup to see background progress persist
-  - Download JSON and inspect grouped domains
-
-(If you provide a GIF or video link, I’ll embed it here.)
-
-## Export Format
-
-The exported JSON is grouped by domain (no top-level `pages`/`assets`). Example:
-
-```
-{
-  "example.com": {
-    "pages": [ { "url": "https://www.example.com/" }, ... ],
-    "assets": [ { "url": "https://www.example.com/images/news/A-2.jpg" }, ... ]
-  },
-  "example2.com": {
-    "pages": [ { "url": "https://example2.com/" }, ... ],
-    "assets": [ { "url": "https://example2.com/wp-content/..." }, ... ]
-  }
-}
-```
-
-## How It Works
-
-- `background.js` runs a sequential fetch pipeline per domain using the Custom Search API
-  - Determines result counts and iterates through pages for both web and image search
-  - Adapts delays and retries on rate limits; stops early on daily quota exceeded
-  - Persists all state in `chrome.storage.local` so popup state is restored across closes
-- `popup.js` provides UI, validation, and renders progress from the shared state
-  - Shows attempt labels and transient error messages for start failures
-  - Allows exporting grouped JSON across all domains
+- `background.js`: the scan pipeline (Search Analytics, then sitemaps, then URL Inspection), with retries on 401, 429 and 5xx errors.
+- `popup.html`, `popup.js`: sign-in, site picker, progress, results list and exports.
+- `lib.js`: pure helpers shared by both, tested by `node test.js`.
 
 ## Permissions
 
-- `storage`: persist credentials and fetch state
-- `downloads`: save the exported JSON
-- `activeTab` (if present): standard extension capability; not required for API calls
-
-## Development
-
-- Edit `popup.html`, `popup.js`, and `background.js`
-- Reload the extension from `chrome://extensions` after changes
-- Use DevTools: right-click popup → Inspect; also check the `Service Worker` console
-
-### Coding Guidelines
-
-- Keep UI changes minimal and consistent with the current style
-- Prefer small, focused changes with clear user outcomes
-- Avoid adding runtime dependencies; this project is vanilla HTML/JS/CSS
-
-## Troubleshooting
-
-- HTTP 429: The extension retries automatically with exponential backoff
-- `dailyLimitExceeded`: The process stops; try again after quota reset
-- `Requests from referer <empty> are blocked`: Update API key restrictions in Google Cloud Console
-
-## Roadmap
-
-- Optional CSV export
-- Include per-URL metadata (title, snippet) when available
-- Pause/resume controls in the popup
-
-## Contributing
-
-See CONTRIBUTING.md for guidelines. Please also review our Code of Conduct.
-
-## Security
-
-See SECURITY.md to report vulnerabilities responsibly.
+- `identity`: Google sign-in (read-only Search Console access).
+- `storage`: remembers the last site and the last scan results.
+- Optional site access: requested per site, only to read that site's sitemaps.
 
 ## License
 
-Licensed under the MIT License. See `LICENSE` for details.
+MIT. See `LICENSE`. Also see CONTRIBUTING.md, CODE_OF_CONDUCT.md and SECURITY.md.

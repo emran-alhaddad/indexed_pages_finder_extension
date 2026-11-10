@@ -2,200 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Indexed Pages Finder</title>
   <style>
     :root {
-      /* Primary brand colours */
       --primary: #00a8ff;
-      --secondary: #011627;
-      --background: #010e1b;
-      --glass-bg: rgba(255, 255, 255, 0.06);
-      --glass-border: rgba(255, 255, 255, 0.12);
+      --primary-dark: #007acc;
+      --bg1: #011627;
+      --bg2: #010e1b;
+      --glass: rgba(255, 255, 255, 0.06);
+      --border: rgba(255, 255, 255, 0.12);
+      --muted: rgba(255, 255, 255, 0.6);
+      --ok: #2ecc71;
+      --bad: #ff6b6b;
+      --warn: #f5b041;
     }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
-      padding: 20px;
-      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, var(--secondary), var(--background));
-      color: #ffffff;
-      width: 360px;
-    }
-    .card {
-      position: relative;
-      padding: 20px;
-      border-radius: 16px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      backdrop-filter: blur(12px);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-    }
-    .header {
-      display: flex;
-      align-items: center;
-      margin-bottom: 16px;
-    }
-    .header img {
-      width: 32px;
-      height: 32px;
-      margin-right: 8px;
-    }
-    .header h2 {
-      margin: 0;
-      font-size: 18px;
-      font-weight: 600;
-      line-height: 1.2;
-    }
-    .field {
-      margin-bottom: 16px;
-    }
-    .field label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      margin-bottom: 4px;
-    }
-    .field label a {
-      color: var(--primary);
-      text-decoration: none;
-      font-size: 11px;
-    }
-    .input-wrapper {
-      position: relative;
-    }
-    .error-message {
-      margin-top: 4px;
-      font-size: 11px;
-      color: #ff6b6b;
-      min-height: 13px;
-    }
-    .field.invalid input {
-      border: 1px solid rgba(255, 107, 107, 0.8);
-      background: rgba(255, 107, 107, 0.15);
-    }
-    #attemptLabel,
-    #attemptError {
-      font-size: 12px;
-      margin-top: 6px;
-      min-height: 18px;
-      display: none;
-    }
-    #attemptLabel {
-      color: rgba(255, 255, 255, 0.85);
-    }
-    #attemptError {
-      color: #ff6b6b;
-    }
-    input {
-      /* Inputs are slightly narrower than the wrapper to leave room for overlays */
-      width: 87%;
-      padding: 10px 34px 10px 12px;
-      border: none;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.1);
+      padding: 14px;
+      width: 420px;
+      font: 13px/1.4 "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
       color: #fff;
-      font-size: 14px;
-      outline: none;
-      backdrop-filter: blur(4px);
     }
-    input::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+    .card { padding: 16px; border-radius: 14px; background: var(--glass); border: 1px solid var(--border); }
+    .header { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+    .header img { width: 28px; height: 28px; }
+    .header h1 { margin: 0; font-size: 18px; font-weight: 600; flex: 1; }
+    a, .link { color: var(--primary); text-decoration: none; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+    .link { font-size: 11px; }
+    p { margin: 0 0 12px; color: var(--muted); }
+    label { display: block; font-size: 11px; margin-bottom: 4px; color: var(--muted); }
+    select, input {
+      width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1); color: #fff; font: inherit;
     }
-    .toggle-visibility {
-      position: absolute;
-      top: 50%;
-      right: 8px;
-      transform: translateY(-50%);
-      cursor: pointer;
-      width: 18px;
-      height: 18px;
-      fill: rgba(255, 255, 255, 0.6);
+    select option { color: #000; }
+    select:focus-visible, input:focus-visible, button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .field { margin-bottom: 12px; }
+    .inline { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+    .inline input { width: 72px; padding: 4px 6px; }
+    button.primary, button.secondary {
+      padding: 9px 12px; border: 0; border-radius: 8px; font: 600 13px/1 inherit; cursor: pointer; color: #fff;
     }
-    button {
-      width: 100%;
-      padding: 10px;
-      border: none;
-      border-radius: 8px;
-      background: linear-gradient(135deg, var(--primary), #007acc);
-      color: #fff;
-      font-size: 14px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s ease;
+    button.primary { width: 100%; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); }
+    button.secondary { background: rgba(255, 255, 255, 0.12); flex: 1; }
+    button:disabled { opacity: 0.5; cursor: default; }
+    progress { width: 100%; height: 6px; margin-top: 10px; appearance: none; border: 0; border-radius: 4px; overflow: hidden; }
+    progress::-webkit-progress-bar { background: rgba(255, 255, 255, 0.1); }
+    progress::-webkit-progress-value { background: var(--primary); }
+    #status { margin-top: 8px; min-height: 18px; font-size: 11px; }
+    #status.error { color: var(--bad); }
+    #note { font-size: 11px; color: var(--warn); margin-top: 4px; }
+    .chips { display: flex; gap: 6px; margin: 14px 0 8px; }
+    .chip {
+      flex: 1; padding: 6px 4px; border-radius: 8px; border: 1px solid var(--border); background: transparent;
+      color: #fff; font: inherit; cursor: pointer; text-align: center;
     }
-    button:disabled {
-      opacity: 0.5;
-      cursor: default;
-    }
-    #progressContainer {
-      margin-top: 12px;
-      display: none;
-    }
-    progress {
-      width: 100%;
-      height: 8px;
-      -webkit-appearance: none;
-      appearance: none;
-      border: none;
-      border-radius: 5px;
-      overflow: hidden;
-      background: rgba(255, 255, 255, 0.1);
-    }
-    progress::-webkit-progress-bar {
-      background: rgba(255, 255, 255, 0.1);
-    }
-    progress::-webkit-progress-value {
-      background: var(--primary);
-    }
-    #status {
-      font-size: 12px;
-      margin-top: 6px;
-      min-height: 18px;
-    }
-    /* Additional spacing between primary and secondary buttons */
-    #downloadBtn {
-      margin-top: 12px;
-    }
+    .chip b { display: block; font-size: 18px; }
+    .chip[aria-pressed="true"] { border-color: var(--primary); background: rgba(0, 168, 255, 0.15); }
+    .chip.ok b { color: var(--ok); }
+    .chip.bad b { color: var(--bad); }
+    .chip.warn b { color: var(--warn); }
+    #list { list-style: none; margin: 8px 0; padding: 0; max-height: 240px; overflow-y: auto; border-top: 1px solid var(--border); }
+    #list li { padding: 6px 2px; border-bottom: 1px solid var(--border); }
+    #list a { display: block; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #list a:hover { color: var(--primary); }
+    .meta { font-size: 11px; color: var(--muted); }
+    .meta .s-indexed { color: var(--ok); }
+    .meta .s-not_indexed { color: var(--bad); }
+    .meta .s-unchecked { color: var(--warn); }
+    #more { font-size: 11px; color: var(--muted); text-align: center; }
+    [hidden] { display: none !important; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="header">
-      <img src="icons/icon32.png" alt="Icon" />
-      <h2>Indexed&nbsp;Pages&nbsp;Finder</h2>
+      <img src="icons/icon32.png" alt="" />
+      <h1>Indexed Pages Finder</h1>
+      <button class="link" id="signOutBtn" hidden>Sign out</button>
     </div>
-    <div class="field">
-      <label>API Key <a href="https://developers.google.com/custom-search/v1/overview" target="_blank" title="Where to obtain your API key">Get key</a></label>
-      <div class="input-wrapper">
-        <input type="password" id="apiKey" placeholder="Enter API key" />
-        <svg class="toggle-visibility" id="toggleApi" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
+
+    <section id="signedOut" hidden>
+      <p>See which of your pages Google has indexed and which are missing, straight from Google Search Console. Read-only access; nothing is changed on your site.</p>
+      <button class="primary" id="signInBtn">Sign in with Google</button>
+      <p style="margin-top:10px;font-size:11px">Works with sites you have verified in <a href="https://search.google.com/search-console" target="_blank">Search Console</a>.</p>
+    </section>
+
+    <section id="signedIn" hidden>
+      <div class="field">
+        <label for="site">Site</label>
+        <select id="site"></select>
       </div>
-      <div class="error-message" id="apiKeyError"></div>
-    </div>
-    <div class="field">
-      <label>CSE ID <a href="https://programmablesearchengine.google.com/controlpanel/create" target="_blank" title="Where to create your search engine">Get ID</a></label>
-      <div class="input-wrapper">
-        <input type="password" id="cseId" placeholder="Enter CSE ID" />
-        <svg class="toggle-visibility" id="toggleCse" viewBox="0 0 24 24"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12c-2.8 0-5-2.2-5-5s2.2-5 5-5 5 2.2 5 5-2.2 5-5 5zm0-8.5c-1.9 0-3.5 1.6-3.5 3.5s1.6 3.5 3.5 3.5 3.5-1.6 3.5-3.5-1.6-3.5-3.5-3.5z"/></svg>
+      <div class="field inline">
+        <label for="inspectLimit" style="margin:0">Check index status of up to</label>
+        <input type="number" id="inspectLimit" min="0" max="2000" step="50" value="100" />
+        <span>sitemap pages</span>
       </div>
-      <div class="error-message" id="cseIdError"></div>
-    </div>
-    <div class="field">
-      <label>Domain(s)</label>
-      <div class="input-wrapper">
-        <input type="text" id="domains" placeholder="example.com, example.org" />
+      <div class="row">
+        <button class="primary" id="scanBtn">Find indexed pages</button>
+        <button class="secondary" id="stopBtn" hidden>Stop</button>
       </div>
-      <div class="error-message" id="domainsError"></div>
-    </div>
-    <button id="startBtn">Start Fetch</button>
-    <div id="attemptLabel"></div>
-    <div id="attemptError"></div>
-    <div id="progressContainer">
-      <progress id="progress" value="0" max="0"></progress>
-      <div id="status"></div>
-    </div>
-    <button id="downloadBtn" disabled>Download JSON</button>
+      <progress id="progress" hidden></progress>
+      <div id="status" role="status" aria-live="polite"></div>
+      <div id="note"></div>
+
+      <div id="results" hidden>
+        <div class="chips" role="group" aria-label="Filter by status">
+          <button class="chip" data-filter="all" aria-pressed="true"><b id="cAll">0</b>All</button>
+          <button class="chip ok" data-filter="indexed" aria-pressed="false"><b id="cIndexed">0</b>Indexed</button>
+          <button class="chip bad" data-filter="not_indexed" aria-pressed="false"><b id="cNot">0</b>Not indexed</button>
+          <button class="chip warn" data-filter="unchecked" aria-pressed="false"><b id="cUnchecked">0</b>Unchecked</button>
+        </div>
+        <input type="search" id="search" placeholder="Filter URLs…" aria-label="Filter URLs" />
+        <ul id="list"></ul>
+        <div id="more"></div>
+        <div class="row" style="margin-top:8px">
+          <button class="secondary" id="csvBtn">Export CSV</button>
+          <button class="secondary" id="jsonBtn">Export JSON</button>
+          <button class="secondary" id="copyBtn">Copy URLs</button>
+        </div>
+      </div>
+    </section>
   </div>
+  <script src="lib.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>
