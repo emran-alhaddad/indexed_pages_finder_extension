@@ -23,7 +23,7 @@ The extension needs an OAuth client ID so users can sign in with Google.
 2. Configure the **OAuth consent screen** and add the scope `https://www.googleapis.com/auth/webmasters.readonly`.
 3. Go to **Credentials**, then **Create OAuth client ID**, and choose **Chrome Extension**. Use the item ID `kocknephdohmkkncdocjfchbdelhmoin`.
 4. Put the client ID into `manifest.json` under `oauth2.client_id`.
-5. For local testing, make the unpacked extension use the store ID: copy the public key from the Chrome Web Store Developer Dashboard (**Package**, then **View public key**) into `manifest.json` as `"key": "..."`.
+5. `manifest.json` already has the store's public `"key"`, so an unpacked copy gets the store ID and Google sign-in works locally. `package.sh` removes the key from the store zip, because the store rejects it.
 
 Then open `chrome://extensions`, enable Developer mode, and click **Load unpacked** on this folder.
 
@@ -32,7 +32,7 @@ Then open `chrome://extensions`, enable Developer mode, and click **Load unpacke
 ## Release
 
 1. Bump `version` in `manifest.json`.
-2. Run `./package.sh`. It runs the tests, refuses to build while the client ID is still a placeholder, and writes `dist/indexed-pages-finder-<version>.zip`.
+2. Run `./package.sh`. It runs the tests, strips `"key"`, and writes `dist/indexed-pages-finder-<version>.zip`.
 3. Upload the zip in the Developer Dashboard. The listing text, permission justifications and privacy answers are in `docs/store-listing.md`, and the screenshots are in `docs/screenshots/`.
 
 ## Files

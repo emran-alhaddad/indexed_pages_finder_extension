@@ -3,15 +3,24 @@
   "description": "See which of your pages Google has indexed, which are missing, and why. Uses your Google Search Console data.",
   "version": "3.0.0",
   "manifest_version": 3,
-  "permissions": ["storage", "identity"],
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqd3u+ytX40htCNpiDcDZTdOQy+9WMdOFqj8oJmZnkeHo+3HeBIx2wJItbbYa5mPdrHM/ZJhwle4cp8Xo54gur0av3t3OTHbps8t+GPMW55W1DbkiWBKlz5XiuHXXzi3x9BC6y5S2Eu96i80t7ZAsMME7I6vYNsD1h3S3h3gu2gm+BNXun5QzG8vDs0d1Chv4kNgVRX5T8sp/wyonz4omzIuEayJwFfH4mkzrMhH80nDrZeAK4LrL65ZHIpistFfJcWDD6ipH7QaN7B+GP+kfmmEWb0NQjparJinj2WW3h3dDQqf1/X8gRx4eyPWsA7dVJYSjODYou0gVc1AZyXtsgQIDAQAB",
+  "permissions": [
+    "storage",
+    "identity"
+  ],
   "host_permissions": [
     "https://www.googleapis.com/*",
     "https://searchconsole.googleapis.com/*"
   ],
-  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
   "oauth2": {
     "client_id": "892359564852-7bad5fdu1p6d7j8h4022m1eifj3grklq.apps.googleusercontent.com",
-    "scopes": ["https://www.googleapis.com/auth/webmasters.readonly"]
+    "scopes": [
+      "https://www.googleapis.com/auth/webmasters.readonly"
+    ]
   },
   "icons": {
     "16": "icons/icon16.png",
