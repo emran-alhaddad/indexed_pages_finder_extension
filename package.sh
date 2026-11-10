@@ -11,5 +11,5 @@ version=$(node -p 'require("./manifest.json").version')
 out="dist/indexed-pages-finder-$version.zip"
 mkdir -p dist
 rm -f "$out"
-zip -qr "$out" manifest.json background.js lib.js popup.html popup.js icons
+zip -qr "$out" manifest.json background.js lib.js popup.html popup.js icons -x "*.DS_Store"
 echo "Built $out"
